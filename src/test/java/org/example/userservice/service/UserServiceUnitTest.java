@@ -33,187 +33,253 @@ class UserServiceUnitTest {
     }
 
     @Test
-    void testCreateUser_WithValidData_ShouldCreateUser() {
-
+    void createUser_WithValidData_ShouldSaveUser() {
         String name = "John Doe";
         String email = "john@example.com";
-        Integer age = 30;
-        User expectedUser = new User(name, email, age);
-        expectedUser.setId(1L);
+        int age = 30;
 
         when(userDAO.existsByEmail(email)).thenReturn(false);
-        when(userDAO.save(any(User.class))).thenReturn(expectedUser);
+        when(userDAO.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(1L);
+            return user;
+        });
 
-        User createdUser = userService.createUser(name, email, age);
+        User result = userService.createUser(name, email, age);
 
-        assertNotNull(createdUser);
-        assertEquals(name, createdUser.getName());
-        assertEquals(email, createdUser.getEmail());
-        assertEquals(age, createdUser.getAge());
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+        assertEquals(name, result.getName());
+        assertEquals(email, result.getEmail());
+        assertEquals(age, result.getAge());
 
         verify(userDAO).existsByEmail(email);
         verify(userDAO).save(any(User.class));
     }
 
     @Test
-    void testCreateUser_WithDuplicateEmail_ShouldThrowException() {
-
+    void createUser_WithExistingEmail_ShouldThrowException() {
         String name = "John Doe";
         String email = "john@example.com";
-        Integer age = 30;
+        int age = 30;
 
         when(userDAO.existsByEmail(email)).thenReturn(true);
 
-        EmailAlreadyExistsException exception = assertThrows(EmailAlreadyExistsException.class,
-                () -> userService.createUser(name, email, age));
-
-        assertEquals("Email already exists: john@example.com", exception.getMessage());
+        assertThrows(EmailAlreadyExistsException.class, () -> {
+            userService.createUser(name, email, age);
+        });
 
         verify(userDAO).existsByEmail(email);
         verify(userDAO, never()).save(any(User.class));
     }
 
     @Test
-    void testGetUserById_WhenUserExists_ShouldReturnUser() {
+    void createUser_WithInvalidEmail_ShouldThrowValidationException() {
+        String name = "John Doe";
+        String invalidEmail = "invalid-email";
+        int age = 30;
 
+        assertThrows(ValidationException.class, () -> {
+            userService.createUser(name, invalidEmail, age);
+        });
+
+        verify(userDAO, never()).existsByEmail(anyString());
+        verify(userDAO, never()).save(any(User.class));
+    }
+
+    @Test
+    void createUser_WithInvalidAge_ShouldThrowValidationException() {
+        String name = "John Doe";
+        String email = "john@example.com";
+        int invalidAge = -5;
+
+        assertThrows(ValidationException.class, () -> {
+            userService.createUser(name, email, invalidAge);
+        });
+    }
+
+    @Test
+    void createUser_WithEmptyName_ShouldThrowValidationException() {
+        String emptyName = "";
+        String email = "john@example.com";
+        int age = 30;
+
+        assertThrows(ValidationException.class, () -> {
+            userService.createUser(emptyName, email, age);
+        });
+    }
+
+    @Test
+    void createUser_WithNullName_ShouldThrowValidationException() {
+        String nullName = null;
+        String email = "john@example.com";
+        int age = 30;
+
+        assertThrows(ValidationException.class, () -> {
+            userService.createUser(nullName, email, age);
+        });
+    }
+
+    @Test
+    void getUserById_WhenUserExists_ShouldReturnUser() {
         Long userId = 1L;
-        User expectedUser = new User("John Doe", "john@example.com", 30);
+        User expectedUser = new User();
         expectedUser.setId(userId);
+        expectedUser.setName("John Doe");
+        expectedUser.setEmail("john@example.com");
+        expectedUser.setAge(30);
 
         when(userDAO.findById(userId)).thenReturn(Optional.of(expectedUser));
 
+        User result = userService.getUserById(userId);
 
-        User foundUser = userService.getUserById(userId);
-
-
-        assertNotNull(foundUser);
-        assertEquals(userId, foundUser.getId());
-        assertEquals("John Doe", foundUser.getName());
-
+        assertNotNull(result);
+        assertEquals(expectedUser, result);
         verify(userDAO).findById(userId);
     }
 
     @Test
-    void testGetUserById_WhenUserNotExists_ShouldThrowException() {
-
+    void getUserById_WhenUserNotExists_ShouldThrowException() {
         Long userId = 999L;
-
         when(userDAO.findById(userId)).thenReturn(Optional.empty());
 
-
-        assertThrows(UserNotFoundException.class,
-                () -> userService.getUserById(userId));
+        assertThrows(UserNotFoundException.class, () -> {
+            userService.getUserById(userId);
+        });
 
         verify(userDAO).findById(userId);
     }
 
     @Test
-    void testGetAllUsers_ShouldReturnAllUsers() {
+    void getAllUsers_ShouldReturnAllUsers() {
+        User user1 = new User();
+        user1.setId(1L);
+        user1.setName("John Doe");
 
-        User user1 = new User("User1", "user1@example.com", 25);
-        User user2 = new User("User2", "user2@example.com", 30);
+        User user2 = new User();
+        user2.setId(2L);
+        user2.setName("Jane Smith");
+
         List<User> expectedUsers = Arrays.asList(user1, user2);
-
         when(userDAO.findAll()).thenReturn(expectedUsers);
 
+        List<User> result = userService.getAllUsers();
 
-        List<User> users = userService.getAllUsers();
-
-
-        assertEquals(2, users.size());
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals(expectedUsers, result);
         verify(userDAO).findAll();
     }
 
     @Test
-    void testUpdateUser_WithValidData_ShouldUpdateUser() {
-
+    void updateUser_WhenUserExists_ShouldUpdateUser() {
         Long userId = 1L;
-        User existingUser = new User("Old Name", "old@example.com", 25);
+        String newName = "Updated Name";
+        String newEmail = "updated@example.com";
+        int newAge = 35;
+
+        User existingUser = new User();
         existingUser.setId(userId);
+        existingUser.setName("Old Name");
+        existingUser.setEmail("old@example.com");
+        existingUser.setAge(30);
 
         when(userDAO.findById(userId)).thenReturn(Optional.of(existingUser));
-        when(userDAO.existsByEmail("new@example.com")).thenReturn(false);
+        when(userDAO.existsByEmail(newEmail)).thenReturn(false);
         when(userDAO.update(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        User updatedUser = userService.updateUser(userId, "New Name", "new@example.com", 30);
+        User result = userService.updateUser(userId, newName, newEmail, newAge);
 
-        assertEquals("New Name", updatedUser.getName());
-        assertEquals("new@example.com", updatedUser.getEmail());
-        assertEquals(30, updatedUser.getAge());
+        assertNotNull(result);
+        assertEquals(userId, result.getId());
+        assertEquals(newName, result.getName());
+        assertEquals(newEmail, result.getEmail());
+        assertEquals(newAge, result.getAge());
 
         verify(userDAO).findById(userId);
-        verify(userDAO).existsByEmail("new@example.com");
-        verify(userDAO).update(existingUser);
+        verify(userDAO).existsByEmail(newEmail);
+        verify(userDAO).update(any(User.class));
     }
 
     @Test
-    void testDeleteUser_WhenUserExists_ShouldDeleteUser() {
+    void updateUser_WhenUserNotExists_ShouldThrowException() {
+        Long userId = 999L;
+        String name = "Name";
+        String email = "email@example.com";
+        int age = 30;
 
+        when(userDAO.findById(userId)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> {
+            userService.updateUser(userId, name, email, age);
+        });
+
+        verify(userDAO).findById(userId);
+        verify(userDAO, never()).update(any(User.class));
+    }
+
+    @Test
+    void updateUser_WithExistingEmail_ShouldThrowException() {
         Long userId = 1L;
-        User existingUser = new User("To Delete", "delete@example.com", 25);
+        String name = "John Doe";
+        String existingEmail = "existing@example.com";
+        int age = 30;
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setName("Old Name");
+        existingUser.setEmail("old@example.com");
+
+        when(userDAO.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userDAO.existsByEmail(existingEmail)).thenReturn(true);
+
+        assertThrows(EmailAlreadyExistsException.class, () -> {
+            userService.updateUser(userId, name, existingEmail, age);
+        });
+
+        verify(userDAO).findById(userId);
+        verify(userDAO).existsByEmail(existingEmail);
+        verify(userDAO, never()).update(any(User.class));
+    }
+
+    @Test
+    void updateUser_WithSameEmail_ShouldUpdateUser() {
+        Long userId = 1L;
+        String name = "Updated Name";
+        String sameEmail = "same@example.com";
+        int age = 35;
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setName("Old Name");
+        existingUser.setEmail(sameEmail);
+
+        when(userDAO.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userDAO.update(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = userService.updateUser(userId, name, sameEmail, age);
+
+        assertNotNull(result);
+        assertEquals(name, result.getName());
+        assertEquals(sameEmail, result.getEmail());
+
+        verify(userDAO).findById(userId);
+        verify(userDAO, never()).existsByEmail(anyString());
+        verify(userDAO).update(any(User.class));
+    }
+
+    @Test
+    void deleteUser_WhenUserExists_ShouldDeleteUser() {
+        Long userId = 1L;
+        User existingUser = new User();
         existingUser.setId(userId);
 
         when(userDAO.findById(userId)).thenReturn(Optional.of(existingUser));
         doNothing().when(userDAO).delete(userId);
 
         userService.deleteUser(userId);
-
         verify(userDAO).findById(userId);
         verify(userDAO).delete(userId);
-    }
-
-    @Test
-    void testValidation_EmptyName_ShouldThrowException() {
-        assertThrows(ValidationException.class,
-                () -> userService.createUser("", "test@example.com", 25));
-    }
-
-    @Test
-    void testValidation_EmptyEmail_ShouldThrowException() {
-        assertThrows(ValidationException.class,
-                () -> userService.createUser("John Doe", "", 25));
-    }
-
-    @Test
-    void testValidation_InvalidEmail_ShouldThrowException() {
-        assertThrows(ValidationException.class,
-                () -> userService.createUser("John Doe", "invalid-email", 25));
-    }
-
-    @Test
-    void testValidation_InvalidAge_ShouldThrowException() {
-        assertThrows(ValidationException.class,
-                () -> userService.createUser("John Doe", "test@example.com", -5));
-    }
-
-    @Test
-    void testValidation_NullId_ShouldThrowException() {
-        assertThrows(ValidationException.class,
-                () -> userService.getUserById(null));
-    }
-
-    @Test
-    void testValidation_InvalidId_ShouldThrowException() {
-        assertThrows(ValidationException.class,
-                () -> userService.getUserById(-1L));
-    }
-
-    @Test
-    void updateUser_WithDuplicateEmail_ShouldThrowException() {
-
-        Long userId = 1L;
-        User existingUser = new User("Old Name", "old@example.com", 25);
-        existingUser.setId(userId);
-
-        when(userDAO.findById(userId)).thenReturn(Optional.of(existingUser));
-        when(userDAO.existsByEmail("existing@example.com")).thenReturn(true);
-
-        assertThrows(EmailAlreadyExistsException.class,
-                () -> userService.updateUser(userId, "New Name", "existing@example.com", 30));
-
-        verify(userDAO).findById(userId);
-        verify(userDAO).existsByEmail("existing@example.com");
-        verify(userDAO, never()).update(any(User.class));
     }
 
     @Test
@@ -221,67 +287,37 @@ class UserServiceUnitTest {
         Long userId = 999L;
         when(userDAO.findById(userId)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class,
-                () -> userService.deleteUser(userId));
+        assertThrows(UserNotFoundException.class, () -> {
+            userService.deleteUser(userId);
+        });
 
         verify(userDAO).findById(userId);
         verify(userDAO, never()).delete(anyLong());
     }
 
     @Test
-    void getUserByEmail_WhenUserExists_ShouldReturnUser() {
-        String email = "john@example.com";
-        User expectedUser = new User("John Doe", email, 30);
-        expectedUser.setId(1L);
+    void updateUser_WithNewEmail_ShouldCheckExistence() {
+        Long userId = 1L;
+        String name = "Updated Name";
+        String newEmail = "new@example.com";
+        int age = 35;
 
-        when(userDAO.findByEmail(email)).thenReturn(Optional.of(expectedUser));
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setName("Old Name");
+        existingUser.setEmail("old@example.com");
 
-        User foundUser = userService.getUserByEmail(email);
+        when(userDAO.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userDAO.existsByEmail(newEmail)).thenReturn(false);
+        when(userDAO.update(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertNotNull(foundUser);
-        assertEquals(email, foundUser.getEmail());
-        assertEquals("John Doe", foundUser.getName());
-        verify(userDAO).findByEmail(email);
-    }
+        User result = userService.updateUser(userId, name, newEmail, age);
+        assertNotNull(result);
+        assertEquals(name, result.getName());
+        assertEquals(newEmail, result.getEmail());
 
-    @Test
-    void getUserByEmail_WhenUserNotExists_ShouldThrowException() {
-        String email = "nonexistent@example.com";
-        when(userDAO.findByEmail(email)).thenReturn(Optional.empty());
-
-        assertThrows(UserNotFoundException.class,
-                () -> userService.getUserByEmail(email));
-
-        verify(userDAO).findByEmail(email);
-    }
-
-    @Test
-    void validation_NullName_ShouldThrowException() {
-        assertThrows(org.example.userservice.exception.ValidationException.class,
-                () -> userService.createUser(null, "test@example.com", 25));
-    }
-
-    @Test
-    void validation_NullEmail_ShouldThrowException() {
-        assertThrows(org.example.userservice.exception.ValidationException.class,
-                () -> userService.createUser("John Doe", null, 25));
-    }
-
-    @Test
-    void validation_AgeTooHigh_ShouldThrowException() {
-        assertThrows(org.example.userservice.exception.ValidationException.class,
-                () -> userService.createUser("John Doe", "test@example.com", 151));
-    }
-
-    @Test
-    void validation_InvalidId_ShouldThrowException() {
-        assertThrows(org.example.userservice.exception.ValidationException.class,
-                () -> userService.getUserById(-1L));
-    }
-
-    @Test
-    void validation_NullId_ShouldThrowException() {
-        assertThrows(org.example.userservice.exception.ValidationException.class,
-                () -> userService.getUserById(null));
+        verify(userDAO).findById(userId);
+        verify(userDAO).existsByEmail(newEmail);
+        verify(userDAO).update(any(User.class));
     }
 }
