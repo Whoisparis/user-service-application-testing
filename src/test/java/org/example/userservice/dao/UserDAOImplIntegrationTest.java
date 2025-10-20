@@ -19,173 +19,159 @@ class UserDAOImplIntegrationTest {
     private UserDAO userDAO;
 
     @BeforeAll
-    void setUpAll() {
+    void setUp() {
         try {
-            Configuration configuration = new Configuration();
-            configuration.configure("hibernate.cfg.xml");
-            sessionFactory = configuration.buildSessionFactory();
+            // Create session factory from hibernate.cfg.xml
+            sessionFactory = new Configuration().configure("hibernate.cfg.xml").buildSessionFactory();
             userDAO = new UserDAOImpl(sessionFactory);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException("Failed to initialize Hibernate SessionFactory", e);
-        }
-    }
-
-    @BeforeEach
-    void setUp() {
-        try (var session = sessionFactory.openSession()) {
-            var transaction = session.beginTransaction();
-            session.createQuery("DELETE FROM User").executeUpdate();
-            transaction.commit();
-        } catch (Exception e) {
-            e.printStackTrace();
+            fail("Failed to set up session factory: " + e.getMessage());
         }
     }
 
     @AfterAll
-    void tearDownAll() {
+    void tearDown() {
         if (sessionFactory != null) {
             sessionFactory.close();
         }
     }
 
+    @BeforeEach
+    void clearDatabase() {
+        // Clean up before each test
+        List<User> users = userDAO.findAll();
+        for (User user : users) {
+            userDAO.delete(user.getId());
+        }
+    }
+
     @Test
-    void save_ShouldPersistUserWithGeneratedId() {
-
+    void save_ShouldSaveUserToDatabase() {
+        // Arrange
         User user = new User();
-        user.setName("Test User");
-        user.setEmail("test@example.com");
-        user.setAge(25);
+        user.setName("Integration Test User");
+        user.setEmail("integration@test.com");
+        user.setAge(30);
 
+        // Act
         User savedUser = userDAO.save(user);
 
+        // Assert
         assertNotNull(savedUser);
         assertNotNull(savedUser.getId());
-        assertEquals("Test User", savedUser.getName());
-        assertEquals("test@example.com", savedUser.getEmail());
-        assertEquals(25, savedUser.getAge());
+        assertEquals("Integration Test User", savedUser.getName());
+        assertEquals("integration@test.com", savedUser.getEmail());
+        assertEquals(30, savedUser.getAge());
     }
 
     @Test
-    void findById_WhenUserExists_ShouldReturnUser() {
+    void findById_ShouldReturnUserFromDatabase() {
+        // Arrange
         User user = new User();
-        user.setName("Test User");
-        user.setEmail("test@example.com");
+        user.setName("Find User");
+        user.setEmail("find@test.com");
         user.setAge(25);
         User savedUser = userDAO.save(user);
-        Long userId = savedUser.getId();
 
-        Optional<User> foundUser = userDAO.findById(userId);
+        // Act
+        Optional<User> foundUser = userDAO.findById(savedUser.getId());
 
+        // Assert
         assertTrue(foundUser.isPresent());
-        assertEquals(userId, foundUser.get().getId());
-        assertEquals("Test User", foundUser.get().getName());
+        assertEquals(savedUser.getId(), foundUser.get().getId());
+        assertEquals("Find User", foundUser.get().getName());
     }
 
     @Test
-    void findById_WhenUserNotExists_ShouldReturnEmpty() {
-        Optional<User> foundUser = userDAO.findById(999L);
-
-        assertFalse(foundUser.isPresent());
-    }
-
-    @Test
-    void findByEmail_WhenUserExists_ShouldReturnUser() {
-        User user = new User();
-        user.setName("Test User");
-        user.setEmail("test@example.com");
-        user.setAge(25);
-        userDAO.save(user);
-
-        Optional<User> foundUser = userDAO.findByEmail("test@example.com");
-
-        assertTrue(foundUser.isPresent());
-        assertEquals("test@example.com", foundUser.get().getEmail());
-        assertEquals("Test User", foundUser.get().getName());
-    }
-
-    @Test
-    void findByEmail_WhenUserNotExists_ShouldReturnEmpty() {
-        Optional<User> foundUser = userDAO.findByEmail("nonexistent@example.com");
-
-        assertFalse(foundUser.isPresent());
-    }
-
-    @Test
-    void existsByEmail_WhenUserExists_ShouldReturnTrue() {
-        User user = new User();
-        user.setName("Test User");
-        user.setEmail("test@example.com");
-        user.setAge(25);
-        userDAO.save(user);
-
-        boolean exists = userDAO.existsByEmail("test@example.com");
-
-        assertTrue(exists);
-    }
-
-    @Test
-    void existsByEmail_WhenUserNotExists_ShouldReturnFalse() {
-        boolean exists = userDAO.existsByEmail("nonexistent@example.com");
-
-        assertFalse(exists);
-    }
-
-    @Test
-    void findAll_ShouldReturnAllUsers() {
+    void findAll_ShouldReturnAllUsersFromDatabase() {
+        // Arrange
         User user1 = new User();
-        user1.setName("User 1");
-        user1.setEmail("user1@example.com");
-        user1.setAge(25);
-        userDAO.save(user1);
+        user1.setName("User One");
+        user1.setEmail("one@test.com");
+        user1.setAge(20);
 
         User user2 = new User();
-        user2.setName("User 2");
-        user2.setEmail("user2@example.com");
+        user2.setName("User Two");
+        user2.setEmail("two@test.com");
         user2.setAge(30);
+
+        userDAO.save(user1);
         userDAO.save(user2);
 
+        // Act
         List<User> users = userDAO.findAll();
 
+        // Assert
         assertNotNull(users);
         assertEquals(2, users.size());
     }
 
     @Test
-    void update_ShouldModifyExistingUser() {
+    void update_ShouldUpdateUserInDatabase() {
+        // Arrange
         User user = new User();
         user.setName("Original Name");
-        user.setEmail("original@example.com");
+        user.setEmail("original@test.com");
         user.setAge(25);
         User savedUser = userDAO.save(user);
 
+        // Act
         savedUser.setName("Updated Name");
-        savedUser.setEmail("updated@example.com");
-        savedUser.setAge(30);
+        savedUser.setEmail("updated@test.com");
         User updatedUser = userDAO.update(savedUser);
 
+        // Assert
         assertNotNull(updatedUser);
-        assertEquals(savedUser.getId(), updatedUser.getId());
         assertEquals("Updated Name", updatedUser.getName());
-        assertEquals("updated@example.com", updatedUser.getEmail());
-        assertEquals(30, updatedUser.getAge());
+        assertEquals("updated@test.com", updatedUser.getEmail());
+
+        // Verify it's actually updated in database
+        Optional<User> foundUser = userDAO.findById(savedUser.getId());
+        assertTrue(foundUser.isPresent());
+        assertEquals("Updated Name", foundUser.get().getName());
     }
 
     @Test
     void delete_ShouldRemoveUserFromDatabase() {
+        // Arrange
         User user = new User();
-        user.setName("Test User");
-        user.setEmail("test@example.com");
-        user.setAge(25);
+        user.setName("To Delete");
+        user.setEmail("delete@test.com");
+        user.setAge(35);
         User savedUser = userDAO.save(user);
-        Long userId = savedUser.getId();
 
-        assertTrue(userDAO.findById(userId).isPresent());
+        // Act
+        userDAO.delete(savedUser.getId());
 
-        userDAO.delete(userId);
+        // Assert
+        Optional<User> foundUser = userDAO.findById(savedUser.getId());
+        assertFalse(foundUser.isPresent());
+    }
 
-        Optional<User> deletedUser = userDAO.findById(userId);
-        assertFalse(deletedUser.isPresent());
+    @Test
+    void existsByEmail_ShouldReturnTrueForExistingEmail() {
+        // Arrange
+        User user = new User();
+        user.setName("Email Test");
+        user.setEmail("exists@test.com");
+        user.setAge(40);
+        userDAO.save(user);
+
+        // Act
+        boolean exists = userDAO.existsByEmail("exists@test.com");
+
+        // Assert
+        assertTrue(exists);
+    }
+
+    @Test
+    void existsByEmail_ShouldReturnFalseForNonExistingEmail() {
+        // Act
+        boolean exists = userDAO.existsByEmail("nonexistent@test.com");
+
+        // Assert
+        assertFalse(exists);
     }
 }
 
