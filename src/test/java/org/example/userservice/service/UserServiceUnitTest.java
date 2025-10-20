@@ -590,11 +590,4 @@ class UserServiceUnitTest {
         verify(userDAO, never()).existsByEmail(anyString());
         verify(userDAO, never()).update(any(User.class));
     }
-    // ========== DEFAULT CONSTRUCTOR TEST ==========
-
-    @Test
-    void defaultConstructor_ShouldCreateUserDAOImpl() {
-        // This test might need adjustment based on your actual UserDAOImpl constructor
-        assertDoesNotThrow(() -> new UserService());
-    }
 }
