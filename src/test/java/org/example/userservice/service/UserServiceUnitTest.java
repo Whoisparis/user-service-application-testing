@@ -20,7 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class UserServiceUnitTest {
+class UserServiceUnitTest {
 
     @Mock
     private UserDAO userDAO;
@@ -196,5 +196,92 @@ public class UserServiceUnitTest {
     void testValidation_InvalidId_ShouldThrowException() {
         assertThrows(ValidationException.class,
                 () -> userService.getUserById(-1L));
+    }
+
+    @Test
+    void updateUser_WithDuplicateEmail_ShouldThrowException() {
+
+        Long userId = 1L;
+        User existingUser = new User("Old Name", "old@example.com", 25);
+        existingUser.setId(userId);
+
+        when(userDAO.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userDAO.existsByEmail("existing@example.com")).thenReturn(true);
+
+        assertThrows(EmailAlreadyExistsException.class,
+                () -> userService.updateUser(userId, "New Name", "existing@example.com", 30));
+
+        verify(userDAO).findById(userId);
+        verify(userDAO).existsByEmail("existing@example.com");
+        verify(userDAO, never()).update(any(User.class));
+    }
+
+    @Test
+    void deleteUser_WhenUserNotExists_ShouldThrowException() {
+        Long userId = 999L;
+        when(userDAO.findById(userId)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class,
+                () -> userService.deleteUser(userId));
+
+        verify(userDAO).findById(userId);
+        verify(userDAO, never()).delete(anyLong());
+    }
+
+    @Test
+    void getUserByEmail_WhenUserExists_ShouldReturnUser() {
+        String email = "john@example.com";
+        User expectedUser = new User("John Doe", email, 30);
+        expectedUser.setId(1L);
+
+        when(userDAO.findByEmail(email)).thenReturn(Optional.of(expectedUser));
+
+        User foundUser = userService.getUserByEmail(email);
+
+        assertNotNull(foundUser);
+        assertEquals(email, foundUser.getEmail());
+        assertEquals("John Doe", foundUser.getName());
+        verify(userDAO).findByEmail(email);
+    }
+
+    @Test
+    void getUserByEmail_WhenUserNotExists_ShouldThrowException() {
+        String email = "nonexistent@example.com";
+        when(userDAO.findByEmail(email)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class,
+                () -> userService.getUserByEmail(email));
+
+        verify(userDAO).findByEmail(email);
+    }
+
+    @Test
+    void validation_NullName_ShouldThrowException() {
+        assertThrows(org.example.userservice.exception.ValidationException.class,
+                () -> userService.createUser(null, "test@example.com", 25));
+    }
+
+    @Test
+    void validation_NullEmail_ShouldThrowException() {
+        assertThrows(org.example.userservice.exception.ValidationException.class,
+                () -> userService.createUser("John Doe", null, 25));
+    }
+
+    @Test
+    void validation_AgeTooHigh_ShouldThrowException() {
+        assertThrows(org.example.userservice.exception.ValidationException.class,
+                () -> userService.createUser("John Doe", "test@example.com", 151));
+    }
+
+    @Test
+    void validation_InvalidId_ShouldThrowException() {
+        assertThrows(org.example.userservice.exception.ValidationException.class,
+                () -> userService.getUserById(-1L));
+    }
+
+    @Test
+    void validation_NullId_ShouldThrowException() {
+        assertThrows(org.example.userservice.exception.ValidationException.class,
+                () -> userService.getUserById(null));
     }
 }

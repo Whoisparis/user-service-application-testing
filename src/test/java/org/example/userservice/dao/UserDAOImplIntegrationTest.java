@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class UserDAOImplIntegrationTest {
+class UserDAOImplIntegrationTest {
 
     private SessionFactory sessionFactory;
     private UserDAO userDAO;
@@ -151,5 +151,33 @@ public class UserDAOImplIntegrationTest {
         boolean exists = userDAO.existsByEmail("noneexistent@example.com");
 
         assertFalse(exists);
+    }
+
+    @Test
+    void save_WithDuplicateEmail_ShouldThrowException() {
+        User user1 = new User("User1", "duplicate@example.com", 30);
+        userDAO.save(user1);
+
+        User user2 = new User("User2", "duplicate@example.com", 25);
+
+        assertThrows(RuntimeException.class, () -> userDAO.save(user2));
+    }
+
+    @Test
+    void delete_NonExistingUser_ShouldThrowException() {
+        assertThrows(RuntimeException.class, () -> userDAO.delete(999L));
+    }
+
+    @Test
+    void findByEmail_WithMultipleUsers_ShouldReturnCorrectUser() {
+        userDAO.save(new User("User1", "user1@example.com", 25));
+        userDAO.save(new User("User2", "user2@example.com", 30));
+        userDAO.save(new User("User3", "user3@example.com", 35));
+
+        Optional<User> foundUser = userDAO.findByEmail("user2@example.com");
+
+        assertTrue(foundUser.isPresent());
+        assertEquals("User2", foundUser.get().getName());
+        assertEquals(30, foundUser.get().getAge());
     }
 }
