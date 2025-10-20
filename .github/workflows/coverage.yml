@@ -2,7 +2,7 @@ name: Java CI with Coverage
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master ]
 
@@ -10,12 +10,17 @@ jobs:
   test-and-coverage:
     name: Run Tests and Generate Coverage
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      checks: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -43,49 +48,35 @@ jobs:
             target/site/jacoco/
             badges/
 
-      - name: Commit coverage badges
-        run: |
-          if [[ -f "badges/jacoco.svg" ]]; then
-            git config --local user.email "action@github.com"
-            git config --local user.name "Github Action"
-            git add badges/
-            git commit -m "Update coverage badges" || echo "No changes to commit"
-          fi
-
-      - name: Push coverage badges
+      - name: Commit and push coverage badges
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: '${{ github.token }}'
-          branch: ${{ github.ref }}
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add badges/
+          git diff --staged --quiet || git commit -m "Update coverage badges [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish Test Report
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: Maven Tests
-          path: target/surefire-reports/*.xml
-          reporter: java-junit
-
-  coverage-check:
-    name: Coverage Quality Gate
+  coverage-summary:
+    name: Coverage summary
     runs-on: ubuntu-latest
     needs: test-and-coverage
+    if: always()
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Download coverage artifact
         uses: actions/download-artifact@v4
         with:
-          name: jacoco-reporter
+          name: jacoco-report
 
       - name: Display coverage summary
         run: |
           echo "=== Coverage Report ==="
           if [[ -f "target/site/jacoco/jacoco.csv" ]]; then
-            echo "Coverage data available"
+            echo  echo "Coverage reports generated successfully"
+            echo "HTML report: target/site/jacoco/index.html"
           else
             echo "No coverage data found"
           fi
