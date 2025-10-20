@@ -8,10 +8,7 @@ import org.testcontainers.junit.jupiter.Container;
 public class TestDatabaseConfig {
 
     @Container
-    private static final PostgreSQLContainer<?> postgres = new  PostgreSQLContainer<>("postgres:15-alpine")
-            .withDatabaseName("userdb")
-            .withUsername("postgres")
-            .withPassword("test");
+    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine").withDatabaseName("userdb").withUsername("postgres").withPassword("test");
 
     private static SessionFactory sessionFactory;
 

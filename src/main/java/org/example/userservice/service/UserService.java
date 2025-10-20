@@ -45,8 +45,7 @@ public class UserService {
             throw new ValidationException("Invalid user ID");
         }
 
-        return userDAO.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
+        return userDAO.findById(id).orElseThrow(() -> new UserNotFoundException(id));
     }
 
     public List<User> getAllUsers() {
@@ -88,8 +87,7 @@ public class UserService {
             throw new ValidationException("Email cannot be empty");
         }
 
-        return userDAO.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+        return userDAO.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
     }
 
     private void validateUserData(String name, String email, Integer age) {
