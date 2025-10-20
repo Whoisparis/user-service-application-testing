@@ -21,8 +21,8 @@ class UserDAOImplIntegrationTest {
     @BeforeAll
     void setUp() {
         try {
-            // Create session factory from hibernate.cfg.xml
-            sessionFactory = new Configuration().configure("hibernate.cfg.xml").buildSessionFactory();
+            // Create session factory from hibernate-test.cfg.xml
+            sessionFactory = new Configuration().configure("hibernate-test.cfg.xml").buildSessionFactory();
             userDAO = new UserDAOImpl(sessionFactory);
         } catch (Exception e) {
             e.printStackTrace();
