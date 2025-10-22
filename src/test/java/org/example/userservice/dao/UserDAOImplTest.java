@@ -48,8 +48,6 @@ class UserDAOImplTest {
         userDAO = new UserDAOImpl(sessionFactory);
     }
 
-    // ========== SAVE METHOD TESTS ==========
-
     @Test
     void save_ShouldReturnSavedUser() {
         User user = new User();
@@ -115,8 +113,6 @@ class UserDAOImplTest {
         verify(session).close();
     }
 
-    // ========== FIND_BY_ID METHOD TESTS ==========
-
     @Test
     void findById_WhenUserExists_ShouldReturnUser() {
         Long userId = 1L;
@@ -165,8 +161,6 @@ class UserDAOImplTest {
         verify(session).close();
     }
 
-    // ========== FIND_ALL METHOD TESTS ==========
-
     @Test
     void findAll_ShouldReturnAllUsers() {
         User user1 = new User();
@@ -209,7 +203,6 @@ class UserDAOImplTest {
         verify(session).close();
     }
 
-    // ========== UPDATE METHOD TESTS ==========
 
     @Test
     void update_ShouldUpdateUser() {
@@ -272,7 +265,6 @@ class UserDAOImplTest {
         verify(session).close();
     }
 
-    // ========== DELETE METHOD TESTS ==========
 
     @Test
     void delete_ShouldDeleteUser() {
@@ -347,8 +339,6 @@ class UserDAOImplTest {
         verify(session, never()).getTransaction();
         verify(session).close();
     }
-
-    // ========== EXISTS_BY_EMAIL METHOD TESTS ==========
 
     @Test
     void existsByEmail_WhenEmailExists_ShouldReturnTrue() {
@@ -457,8 +447,6 @@ class UserDAOImplTest {
         verify(longQuery).uniqueResult();
         verify(session).close();
     }
-
-    // ========== EDGE CASE TESTS ==========
 
     @Test
     void constructor_WithNullSessionFactory_ShouldWork() {

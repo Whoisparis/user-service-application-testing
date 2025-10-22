@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ExceptionTest {
 
-    // ========== UserNotFoundException TESTS ==========
-
     @Test
     void testUserNotFoundException_WithId() {
         Long userId = 1L;
@@ -54,8 +52,6 @@ class ExceptionTest {
         assertTrue(exception instanceof RuntimeException);
     }
 
-    // ========== EmailAlreadyExistsException TESTS ==========
-
     @Test
     void testEmailAlreadyExistsException_WithEmail() {
         String email = "test@example.com";
@@ -95,8 +91,6 @@ class ExceptionTest {
         assertTrue(exception instanceof RuntimeException);
     }
 
-    // ========== ValidationException TESTS ==========
-
     @Test
     void testValidationException_WithMessage() {
         String message = "Validation failed";
@@ -133,8 +127,6 @@ class ExceptionTest {
 
         assertTrue(exception instanceof RuntimeException);
     }
-
-    // ========== EXCEPTION BEHAVIOR TESTS ==========
 
     @Test
     void testExceptions_CanBeThrownAndCaught() {

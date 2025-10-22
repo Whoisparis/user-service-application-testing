@@ -32,8 +32,6 @@ class UserServiceUnitTest {
         userService = new UserService(userDAO);
     }
 
-    // ========== CREATE USER TESTS ==========
-
     @Test
     void createUser_WithValidData_ShouldReturnCreatedUser() {
         String name = "John Doe";
@@ -158,8 +156,6 @@ class UserServiceUnitTest {
         verify(userDAO).save(any(User.class));
     }
 
-    // ========== GET USER BY ID TESTS ==========
-
     @Test
     void getUserById_WithValidId_ShouldReturnUser() {
         Long userId = 1L;
@@ -220,8 +216,6 @@ class UserServiceUnitTest {
         assertEquals("Invalid user ID", exception.getMessage());
     }
 
-    // ========== GET ALL USERS TESTS ==========
-
     @Test
     void getAllUsers_ShouldReturnAllUsers() {
 
@@ -252,8 +246,6 @@ class UserServiceUnitTest {
         assertTrue(result.isEmpty());
         verify(userDAO).findAll();
     }
-
-    // ========== UPDATE USER TESTS ==========
 
     @Test
     void updateUser_WithValidData_ShouldReturnUpdatedUser() {
@@ -347,8 +339,6 @@ class UserServiceUnitTest {
         verify(userDAO, never()).update(any(User.class));
     }
 
-    // ========== DELETE USER TESTS ==========
-
     @Test
     void deleteUser_WithValidId_ShouldDeleteUser() {
         Long userId = 1L;
@@ -388,8 +378,6 @@ class UserServiceUnitTest {
         verify(userDAO, never()).findById(anyLong());
         verify(userDAO, never()).delete(anyLong());
     }
-
-    // ========== GET USER BY EMAIL TESTS ==========
 
     @Test
     void getUserByEmail_WithValidEmail_ShouldReturnUser() {
@@ -438,8 +426,6 @@ class UserServiceUnitTest {
 
         assertEquals("Email cannot be empty", exception.getMessage());
     }
-
-    // ========== EMAIL VALIDATION TESTS ==========
 
     @Test
     void createUser_WithValidEmailFormats_ShouldCreateUser() {
